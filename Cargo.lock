@@ -78,7 +78,7 @@ source = "git+https://github.com/kyllingene/sarge#9b8e2bc396e5148e6bafb5e986d1da
 
 [[package]]
 name = "todo"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "sarge",
  "todo-lib",

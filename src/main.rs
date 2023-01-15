@@ -2,7 +2,7 @@ use std::{
     fs::{read_to_string, OpenOptions},
     io::Write,
     process::exit,
-    str::FromStr,
+    str::FromStr, path::Path,
 };
 
 use sarge::*;
@@ -28,9 +28,12 @@ fn main() {
         Ok(r) => r,
     };
 
-    let filename = get_val!(parser, both, 'f', "file")
-        .unwrap_or(ArgValue::String("todo.txt".into()))
-        .get_str();
+    let filename: String;
+    if Path::new("todo.txt").exists() {
+        filename = String::from("todo.txt");
+    } else {
+        filename = String::from("~/todo.txt");
+    }
 
     if get_flag!(parser, both, 'h', "help") {
         println!("{} [options]", parser.binary.unwrap_or("todo".to_string()));
@@ -38,7 +41,9 @@ fn main() {
         println!("  -n /      --new <todo> : creates a new todo, with the given text");
         println!("  -c / --complete <todo> : completes the todo, specified by the given text");
         println!("  -l /     --list        : prints this help message");
-        println!("  -f /     --file <file> : specifies the file (defaults to todo.txt)");
+        println!("  -f /     --file <file> : specifies the file");
+        println!("                           if todo.txt is in the current directory, uses that;");
+        println!("                           otherwise, uses ~/todo.txt");
 
         exit(0);
     }
