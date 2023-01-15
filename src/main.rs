@@ -46,10 +46,17 @@ fn main() {
     let mut todos = TodoTable::new(None::<char>);
     todos.add_col("Todos");
 
-    let todo_txt = read_to_string(filename.clone()).unwrap_or_else(|e| {
-        eprintln!("error (while reading file): {}", e);
-        exit(1);
-    });
+    let todo_txt = match read_to_string(filename.clone()) {
+        Ok(s) => s,
+        Err(e) => {
+            if e.raw_os_error().unwrap_or(0) == 2 {
+                "".to_string()
+            } else {
+                eprintln!("error (while reading file): {}", e);
+                exit(1);
+            }
+        }
+    };
 
     let mut file = match OpenOptions::new()
         .create(true)
@@ -65,17 +72,28 @@ fn main() {
     };
 
     for line in todo_txt.lines() {
-        todos.add_todo(Todo::from_str(line).unwrap_or_else(|e| {
-            eprintln!("invalid todo: {}", e);
-            exit(1);
-        }), "Todos");
+        todos.add_todo(
+            Todo::from_str(line).unwrap_or_else(|e| {
+                eprintln!("invalid todo: {}", e);
+                exit(1);
+            }),
+            "Todos",
+        );
     }
 
+    let mut action = false;
+    let mut changed = false;
     if let Some(ArgValue::String(todo)) = get_val!(parser, both, 'n', "new") {
-        todos.add_todo(Todo::from_str(&todo).unwrap_or_else(|e| {
-            eprintln!("invalid todo: {}", e);
-            exit(1);
-        }), "Todos");
+        todos.add_todo(
+            Todo::from_str(&todo).unwrap_or_else(|e| {
+                eprintln!("invalid todo: {}", e);
+                exit(1);
+            }),
+            "Todos",
+        );
+
+        action = true;
+        changed = true;
     }
 
     if let Some(ArgValue::String(todo)) = get_val!(parser, both, 'c', "complete") {
@@ -86,23 +104,28 @@ fn main() {
                 exit(1);
             })
             .complete();
+
+        action = true;
+        changed = true;
     }
 
-    if get_flag!(parser, both, 'l', "list") {
+    if get_flag!(parser, both, 'l', "list") || !action {
         todos.col("Todos").unwrap().todos.iter().for_each(|t| {
             println!("{}", t.to_string());
         });
     }
 
-    todos.col("Todos").unwrap().todos.iter().for_each(|t| {
-        writeln!(file, "{}", t.to_string()).unwrap_or_else(|e| {
+    if changed {
+        todos.col("Todos").unwrap().todos.iter().for_each(|t| {
+            writeln!(file, "{}", t.to_string()).unwrap_or_else(|e| {
+                eprintln!("error (while writing to file): {}", e);
+                exit(1);
+            });
+        });
+
+        file.flush().unwrap_or_else(|e| {
             eprintln!("error (while writing to file): {}", e);
             exit(1);
         });
-    });
-
-    file.flush().unwrap_or_else(|e| {
-        eprintln!("error (while writing to file): {}", e);
-        exit(1);
-    });
+    };
 }
