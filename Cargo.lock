@@ -110,9 +110,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.49"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57a8eca9f9c4ffde41714334dee777596264c7825420f521abc92b5b5deb63a5"
+checksum = "6ef7d57beacfaf2d8aee5937dab7b7f28de3cb8b1828479bb5de2a7106f2bae2"
 dependencies = [
  "unicode-ident",
 ]
@@ -199,8 +199,8 @@ dependencies = [
 
 [[package]]
 name = "todo-lib"
-version = "1.0.0"
-source = "git+https://github.com/kyllingene/todo-lib#55b7fcad5f8d16a8e9c829b782fb0aace3a55c03"
+version = "1.1.0"
+source = "git+https://github.com/kyllingene/todo-lib#b5c9ffa17a42053608018680b9ae73584fb2beca"
 dependencies = [
  "datetime",
 ]

@@ -10,6 +10,38 @@ use dirs::home_dir;
 use sarge::*;
 use todo_lib::*;
 
+struct Config {
+    pub source: Option<String>,
+}
+
+fn get_config(filename: String) -> Config {
+    let config_txt = read_to_string(filename).unwrap_or("".to_string());
+
+    let mut config = TodoTable::new(Some("Config"));
+    config.add_col("Config");
+    for line in config_txt.lines() {
+        config.add_todo(
+            Todo::from_str(line).unwrap_or_else(|e| {
+                eprintln!("invalid config line: {e}");
+                exit(1);
+            }),
+            "Config",
+        );
+    }
+
+    let mut src = None;
+
+    if let Some(source) = config.get_todo("source", "Config") {
+        if let Some(source) = source.get_meta("path") {
+            src = Some(source);
+        }
+    }
+
+    Config {
+        source: src.cloned(),
+    }
+}
+
 fn main() {
     let mut parser = ArgumentParser::new();
     parser.add(arg!(flag, both, 'h', "help"));
@@ -22,6 +54,8 @@ fn main() {
 
     parser.add(arg!(str, both, 'f', "file"));
 
+    parser.add(arg!(str, double, "config"));
+
     let _remainder = match parser.parse() {
         Err(e) => {
             eprintln!("error (while parsing arguments): {e}");
@@ -32,22 +66,47 @@ fn main() {
 
     if get_flag!(parser, both, 'h', "help") {
         println!("{} [options]", parser.binary.unwrap_or("todo".to_string()));
-        println!("  -h /     --help        : prints this help message");
-        println!("  -n /      --new <todo> : creates a new todo, with the given text");
-        println!("  -c / --complete <todo> : completes the todo, specified by the given text");
-        println!("  -l /     --list        : prints this help message");
-        println!("  -f /     --file <file> : specifies the file");
+        println!("      --help / -h        : prints this help message");
+        println!("       --new / -n <todo> : creates a new todo, with the given text");
+        println!("  --complete / -c <todo> : completes the todo, specified by the given text");
+        println!("      --list / -l        : prints this help message");
+        println!("    --config      <file> : specifies the config file");
+        println!("                             defaults to ~/.todo-cfg.txt");
+        println!("      --file / -f <file> : specifies the source file");
         println!("                           if todo.txt exists in the current directory,");
-        println!("                           defaults to that; otherwise, uses ~/todo.txt");
+        println!("                           defaults to that; otherwise, defaults to config");
+        println!();
+        println!("Config is in the todo.txt format, using metadata.");
+        println!("Default config:");
+        println!("```");
+        println!("source path:~/todo.txt");
+        // println!("x sort list");
+        println!("```");
 
         exit(0);
     }
+
+    let config = get_config(match get_val!(parser, double, "config") {
+        Some(ArgValue::String(path)) => path,
+        _ => {
+            let mut home = home_dir().unwrap_or_else(|| {
+                eprintln!("error: failed to get home directory");
+                exit(1)
+            });
+
+            home.push(".todo-cfg.txt");
+
+            home.display().to_string()
+        }
+    });
 
     let filename: String;
     if let Some(ArgValue::String(f)) = get_val!(parser, both, 'f', "file") {
         filename = f;
     } else if Path::new("todo.txt").exists() {
         filename = String::from("todo.txt");
+    } else if let Some(path) = config.source {
+        filename = path;
     } else {
         let mut path = home_dir().unwrap_or_else(|| {
             eprintln!("error: failed to get home directory");
@@ -61,12 +120,8 @@ fn main() {
     let mut todos = TodoTable::new(None::<char>);
     todos.add_col("Todos");
 
-    let mut changed = false;
-    if get_val!(parser, both, 'n', "new").is_some()
-        || get_val!(parser, both, 'c', "complete").is_some()
-    {
-        changed = true;
-    }
+    let changed = get_val!(parser, both, 'n', "new").is_some()
+        || get_val!(parser, both, 'c', "complete").is_some();
 
     let todo_txt = match read_to_string(filename.clone()) {
         Ok(s) => s,
@@ -74,7 +129,7 @@ fn main() {
             if e.raw_os_error().unwrap_or(0) == 2 {
                 "".to_string()
             } else {
-                eprintln!("error (while reading file): {}", e);
+                eprintln!("error (while reading file): {e}");
                 exit(1);
             }
         }
@@ -83,7 +138,7 @@ fn main() {
     for line in todo_txt.lines() {
         todos.add_todo(
             Todo::from_str(line).unwrap_or_else(|e| {
-                eprintln!("invalid todo: {}", e);
+                eprintln!("invalid todo: {e}");
                 exit(1);
             }),
             "Todos",
@@ -94,7 +149,7 @@ fn main() {
     if let Some(ArgValue::String(todo)) = get_val!(parser, both, 'n', "new") {
         todos.add_todo(
             Todo::from_str(&todo).unwrap_or_else(|e| {
-                eprintln!("invalid todo: {}", e);
+                eprintln!("invalid todo: {e}");
                 exit(1);
             }),
             "Todos",
@@ -107,7 +162,7 @@ fn main() {
         todos
             .get_todo(todo.clone(), "Todos".to_string())
             .unwrap_or_else(|| {
-                eprintln!("couldn't find todo {}", todo);
+                eprintln!("couldn't find todo {todo}");
                 exit(1);
             })
             .complete();
@@ -117,7 +172,7 @@ fn main() {
 
     if get_flag!(parser, both, 'l', "list") || !action {
         todos.col("Todos").unwrap().todos.iter().for_each(|t| {
-            println!("{}", t.to_string());
+            println!("{t}");
         });
     }
 
@@ -130,20 +185,20 @@ fn main() {
         {
             Ok(file) => file,
             Err(e) => {
-                eprintln!("error (while opening file to write): {}", e);
+                eprintln!("error (while opening file to write): {e}");
                 exit(1);
             }
         };
 
         todos.col("Todos").unwrap().todos.iter().for_each(|t| {
-            writeln!(file, "{}", t.to_string()).unwrap_or_else(|e| {
-                eprintln!("error (while writing to file): {}", e);
+            writeln!(file, "{t}").unwrap_or_else(|e| {
+                eprintln!("error (while writing to file): {e}");
                 exit(1);
             });
         });
 
         file.flush().unwrap_or_else(|e| {
-            eprintln!("error (while writing to file): {}", e);
+            eprintln!("error (while writing to file): {e}");
             exit(1);
         });
     };
