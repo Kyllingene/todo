@@ -158,14 +158,20 @@ fn main() {
         action = true;
     }
 
-    if let Some(ArgValue::String(todo)) = get_val!(parser, both, 'c', "complete") {
-        todos
-            .get_todo(todo.clone(), "Todos".to_string())
-            .unwrap_or_else(|| {
-                eprintln!("couldn't find todo {todo}");
-                exit(1);
-            })
-            .complete();
+    if let Some(ArgValue::String(todo_title)) = get_val!(parser, both, 'c', "complete") {
+        let mut todo = todos
+            .get_todo(todo_title.clone(), "Todos".to_string());
+
+        if todo.is_none() {
+            todo = todos.get_meta("Todos", "id", todo_title.as_str());
+        }
+
+        if let Some(todo) = todo {
+            todo.complete();
+        } else {
+            eprintln!("couldn't find todo {todo_title}");
+            exit(1);
+        }
 
         action = true;
     }
