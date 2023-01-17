@@ -72,10 +72,13 @@ fn main() {
         println!("{} [options]", parser.binary.unwrap_or("todo".to_string()));
         println!("      --help / -h        : prints this help message");
         println!("       --new / -n <todo> : creates a new todo, with the given text");
+        println!("                           parses all metadata tags");
         println!("  --complete / -c <todo> : completes the todo, specified by the given text");
+        println!("                           if no todo matches the text, looks for a todo with");
+        println!("                           that id (using the `id:` tag)");
         println!("      --list / -l        : prints this help message");
         println!("    --config      <file> : specifies the config file");
-        println!("                             defaults to ~/.todo-cfg.txt");
+        println!("                           defaults to ~/.todo-cfg.txt");
         println!("   --project      <tag>  : filters by project tag");
         println!("   --context      <tag>  : filters by context tag");
         println!("   --archive / -a        : archives completed tasks");
@@ -84,11 +87,10 @@ fn main() {
         println!("                           if todo.txt exists in the current directory,");
         println!("                           defaults to that; otherwise, defaults to config");
         println!();
-        println!("Config is in the todo.txt format, using metadata.");
-        println!("Default config:");
+        println!("Config is in the todo.txt format, using metadata:");
         println!("```");
-        println!("source path:~/todo.txt");
-        println!("archive path:~/todo.txt.archive");
+        println!("source path:<SOURCE-PATH> example:~/todo.txt");
+        println!("archive path:<ARCHIVE-PATH> example:~/todo.archive.txt");
         // println!("x sort list");
         println!("```");
 
@@ -110,7 +112,7 @@ fn main() {
     });
 
     let filename: String;
-    
+
     if Path::new("todo.txt").exists() {
         filename = String::from("todo.txt");
     } else if let Some(ArgValue::String(f)) = get_val!(parser, both, 'f', "file") {
@@ -170,8 +172,7 @@ fn main() {
     }
 
     if let Some(ArgValue::String(todo_title)) = get_val!(parser, both, 'c', "complete") {
-        let mut todo = todos
-            .get_todo(todo_title.clone(), "Todos".to_string());
+        let mut todo = todos.get_todo(todo_title.clone(), "Todos".to_string());
 
         if todo.is_none() {
             todo = todos.get_meta("Todos", "id", todo_title.as_str());
@@ -187,22 +188,20 @@ fn main() {
         action = true;
     }
 
-    if (get_flag!(parser, both, 'l', "list") || !action) && !get_flag!(parser, both, 'a', "archive") {
+    if (get_flag!(parser, both, 'l', "list") || !action) && !get_flag!(parser, both, 'a', "archive")
+    {
         use std::cmp::Ordering;
-        let mut col = todos.col("Todos")
-            .unwrap()
-            .todos
-            .clone();
+        let mut col = todos.col("Todos").unwrap().todos.clone();
 
         // TODO: is this a complete sorting?
         col.sort_by(|x, y| {
-            if x.due() < y.due() {
+            if !x.due() & y.due() {
                 return Ordering::Greater;
-            } else if x.due() > y.due() {
+            } else if x.due() & !y.due() {
                 return Ordering::Less;
-            } else if x.completed < y.completed {
+            } else if !x.completed & y.completed {
                 return Ordering::Greater;
-            } else if x.completed > y.completed {
+            } else if x.completed & !y.completed {
                 return Ordering::Less;
             }
 
@@ -218,35 +217,24 @@ fn main() {
 
             match x.deadline {
                 TodoDate::Day(dx) => {
-                    match y.deadline {
-                        TodoDate::Day(yx) => {
-                            return dx.cmp(&yx)
-                        }
-                        _ => {}
+                    if let TodoDate::Day(yx) = y.deadline {
+                        return dx.cmp(&yx);
                     }
                 }
                 TodoDate::Daily(dx) => {
-                    match y.deadline {
-                        TodoDate::Daily(yx) => {
-                            return dx.cmp(&yx)
-                        }
-                        _ => {}
+                    if let TodoDate::Daily(yx) = y.deadline {
+                        return dx.cmp(&yx);
                     }
                 }
                 TodoDate::Instant(dx) => {
-                    match y.deadline {
-                        TodoDate::Instant(yx) => {
-                            return dx.cmp(&yx)
-                        }
-                        _ => {}
+                    if let TodoDate::Instant(yx) = y.deadline {
+                        return dx.cmp(&yx);
                     }
                 }
-                TodoDate::Always => {
-                    match y.deadline {
-                        TodoDate::Always => {}
-                        _ => return Ordering::Less,
-                    }
-                }
+                TodoDate::Always => match y.deadline {
+                    TodoDate::Always => {}
+                    _ => return Ordering::Less,
+                },
                 _ => {}
             }
 
@@ -258,7 +246,7 @@ fn main() {
 
             x.title.cmp(&y.title)
         });
-        
+
         col.iter()
             .filter(|t| {
                 if let Some(ArgValue::String(project)) = get_val!(parser, double, "project") {
@@ -266,7 +254,8 @@ fn main() {
                 }
 
                 true
-            }).filter(|t| {
+            })
+            .filter(|t| {
                 if let Some(ArgValue::String(context)) = get_val!(parser, double, "context") {
                     return t.has_context_tag(context);
                 }
@@ -274,8 +263,8 @@ fn main() {
                 true
             })
             .for_each(|t| {
-            println!("{t}");
-        });
+                println!("{t}");
+            });
     }
 
     if get_flag!(parser, both, 'a', "archive") {
@@ -297,16 +286,11 @@ fn main() {
             archive = path.display().to_string();
         }
 
-        let todos = todos.col("Todos")
-            .unwrap()
-            .todos
-            .clone();
+        let todos = todos.col("Todos").unwrap().todos.clone();
 
-        let keep = todos.iter()
-            .filter(|t| !t.completed);
-        
-        let arch = todos.iter()
-            .filter(|t| t.completed);
+        let keep = todos.iter().filter(|t| !t.completed);
+
+        let arch = todos.iter().filter(|t| t.completed);
 
         let mut file = match OpenOptions::new()
             .create(true)
@@ -320,7 +304,7 @@ fn main() {
                 exit(1);
             }
         };
-        
+
         keep.for_each(|t| {
             writeln!(file, "{t}").unwrap_or_else(|e| {
                 eprintln!("error (while writing to file): {e}");
