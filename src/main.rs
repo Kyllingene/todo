@@ -10,8 +10,10 @@ use dirs::home_dir;
 use sarge::*;
 use todo_lib::*;
 
+#[derive(Default)]
 struct Config {
     pub source: Option<String>,
+    pub archive: Option<String>,
 }
 
 fn get_config(filename: String) -> Config {
@@ -29,32 +31,34 @@ fn get_config(filename: String) -> Config {
         );
     }
 
-    let mut src = None;
+    let mut cfg = Config::default();
 
     if let Some(source) = config.get_todo("source", "Config") {
         if let Some(source) = source.get_meta("path") {
-            src = Some(source);
+            cfg.source = Some(source.clone());
         }
     }
 
-    Config {
-        source: src.cloned(),
+    if let Some(archive) = config.get_todo("archive", "Config") {
+        if let Some(archive) = archive.get_meta("path") {
+            cfg.archive = Some(archive.clone());
+        }
     }
+
+    cfg
 }
 
 fn main() {
     let mut parser = ArgumentParser::new();
     parser.add(arg!(flag, both, 'h', "help"));
-
     parser.add(arg!(str, both, 'n', "new"));
-
     parser.add(arg!(str, both, 'c', "complete"));
-
     parser.add(arg!(flag, both, 'l', "list"));
-
     parser.add(arg!(str, both, 'f', "file"));
-
+    parser.add(arg!(str, double, "context"));
+    parser.add(arg!(str, double, "project"));
     parser.add(arg!(str, double, "config"));
+    parser.add(arg!(flag, both, 'a', "archive"));
 
     let _remainder = match parser.parse() {
         Err(e) => {
@@ -72,6 +76,10 @@ fn main() {
         println!("      --list / -l        : prints this help message");
         println!("    --config      <file> : specifies the config file");
         println!("                             defaults to ~/.todo-cfg.txt");
+        println!("   --project      <tag>  : filters by project tag");
+        println!("   --context      <tag>  : filters by context tag");
+        println!("   --archive / -a        : archives completed tasks");
+        println!("                           default archive file is source + .archive");
         println!("      --file / -f <file> : specifies the source file");
         println!("                           if todo.txt exists in the current directory,");
         println!("                           defaults to that; otherwise, defaults to config");
@@ -80,6 +88,7 @@ fn main() {
         println!("Default config:");
         println!("```");
         println!("source path:~/todo.txt");
+        println!("archive path:~/todo.txt.archive");
         // println!("x sort list");
         println!("```");
 
@@ -101,12 +110,13 @@ fn main() {
     });
 
     let filename: String;
-    if let Some(ArgValue::String(f)) = get_val!(parser, both, 'f', "file") {
-        filename = f;
-    } else if Path::new("todo.txt").exists() {
+    
+    if Path::new("todo.txt").exists() {
         filename = String::from("todo.txt");
-    } else if let Some(path) = config.source {
-        filename = path;
+    } else if let Some(ArgValue::String(f)) = get_val!(parser, both, 'f', "file") {
+        filename = f;
+    } else if let Some(path) = &config.source {
+        filename = path.to_string();
     } else {
         let mut path = home_dir().unwrap_or_else(|| {
             eprintln!("error: failed to get home directory");
@@ -120,8 +130,9 @@ fn main() {
     let mut todos = TodoTable::new(None::<char>);
     todos.add_col("Todos");
 
-    let changed = get_val!(parser, both, 'n', "new").is_some()
-        || get_val!(parser, both, 'c', "complete").is_some();
+    let changed = (get_val!(parser, both, 'n', "new").is_some()
+        || get_val!(parser, both, 'c', "complete").is_some())
+        && !get_flag!(parser, both, 'a', "archive");
 
     let todo_txt = match read_to_string(filename.clone()) {
         Ok(s) => s,
@@ -176,9 +187,175 @@ fn main() {
         action = true;
     }
 
-    if get_flag!(parser, both, 'l', "list") || !action {
-        todos.col("Todos").unwrap().todos.iter().for_each(|t| {
+    if (get_flag!(parser, both, 'l', "list") || !action) && !get_flag!(parser, both, 'a', "archive") {
+        use std::cmp::Ordering;
+        let mut col = todos.col("Todos")
+            .unwrap()
+            .todos
+            .clone();
+
+        // TODO: is this a complete sorting?
+        col.sort_by(|x, y| {
+            if x.due() < y.due() {
+                return Ordering::Greater;
+            } else if x.due() > y.due() {
+                return Ordering::Less;
+            } else if x.completed < y.completed {
+                return Ordering::Greater;
+            } else if x.completed > y.completed {
+                return Ordering::Less;
+            }
+
+            if x.priority != y.priority {
+                if y.priority.is_none() {
+                    return Ordering::Greater;
+                } else if x.priority.is_none() {
+                    return Ordering::Less;
+                }
+
+                return x.priority.cmp(&y.priority);
+            }
+
+            match x.deadline {
+                TodoDate::Day(dx) => {
+                    match y.deadline {
+                        TodoDate::Day(yx) => {
+                            return dx.cmp(&yx)
+                        }
+                        _ => {}
+                    }
+                }
+                TodoDate::Daily(dx) => {
+                    match y.deadline {
+                        TodoDate::Daily(yx) => {
+                            return dx.cmp(&yx)
+                        }
+                        _ => {}
+                    }
+                }
+                TodoDate::Instant(dx) => {
+                    match y.deadline {
+                        TodoDate::Instant(yx) => {
+                            return dx.cmp(&yx)
+                        }
+                        _ => {}
+                    }
+                }
+                TodoDate::Always => {
+                    match y.deadline {
+                        TodoDate::Always => {}
+                        _ => return Ordering::Less,
+                    }
+                }
+                _ => {}
+            }
+
+            if let Some(cx) = x.created {
+                if let Some(cy) = y.created {
+                    return cx.cmp(&cy);
+                }
+            }
+
+            x.title.cmp(&y.title)
+        });
+        
+        col.iter()
+            .filter(|t| {
+                if let Some(ArgValue::String(project)) = get_val!(parser, double, "project") {
+                    return t.has_project_tag(project);
+                }
+
+                true
+            }).filter(|t| {
+                if let Some(ArgValue::String(context)) = get_val!(parser, double, "context") {
+                    return t.has_context_tag(context);
+                }
+
+                true
+            })
+            .for_each(|t| {
             println!("{t}");
+        });
+    }
+
+    if get_flag!(parser, both, 'a', "archive") {
+        let mut archive: String;
+        if Path::new("todo.txt.archive").exists() || Path::new("todo.txt").exists() {
+            archive = String::from("todo.txt.archive");
+        } else if let Some(path) = config.archive {
+            archive = path;
+        } else if config.source.is_some() {
+            archive = config.source.unwrap();
+            archive.push_str(".archive");
+        } else {
+            let mut path = home_dir().unwrap_or_else(|| {
+                eprintln!("error: failed to get home directory");
+                exit(1);
+            });
+            path.push("todo.txt.archive");
+
+            archive = path.display().to_string();
+        }
+
+        let todos = todos.col("Todos")
+            .unwrap()
+            .todos
+            .clone();
+
+        let keep = todos.iter()
+            .filter(|t| !t.completed);
+        
+        let arch = todos.iter()
+            .filter(|t| t.completed);
+
+        let mut file = match OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(filename.clone())
+        {
+            Ok(file) => file,
+            Err(e) => {
+                eprintln!("error (while opening file to write): {e}");
+                exit(1);
+            }
+        };
+        
+        keep.for_each(|t| {
+            writeln!(file, "{t}").unwrap_or_else(|e| {
+                eprintln!("error (while writing to file): {e}");
+                exit(1);
+            });
+        });
+
+        file.flush().unwrap_or_else(|e| {
+            eprintln!("error (while writing to file): {e}");
+            exit(1);
+        });
+
+        let mut file = match OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(archive)
+        {
+            Ok(file) => file,
+            Err(e) => {
+                eprintln!("error (while opening archive file to write): {e}");
+                exit(1);
+            }
+        };
+
+        arch.for_each(|t| {
+            writeln!(file, "{t}").unwrap_or_else(|e| {
+                eprintln!("error (while writing to archive file): {e}");
+                exit(1);
+            });
+        });
+
+        file.flush().unwrap_or_else(|e| {
+            eprintln!("error (while writing to archive file): {e}");
+            exit(1);
         });
     }
 
