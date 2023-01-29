@@ -55,9 +55,9 @@ fn main() {
     parser.add(arg!(str, both, 'c', "complete"));
     parser.add(arg!(flag, both, 'l', "list"));
     parser.add(arg!(str, both, 'f', "file"));
-    parser.add(arg!(str, double, "context"));
-    parser.add(arg!(str, double, "project"));
-    parser.add(arg!(str, double, "config"));
+    parser.add(arg!(str, long, "context"));
+    parser.add(arg!(str, long, "project"));
+    parser.add(arg!(str, long, "config"));
     parser.add(arg!(flag, both, 'a', "archive"));
 
     let _remainder = match parser.parse() {
@@ -97,7 +97,7 @@ fn main() {
         exit(0);
     }
 
-    let config = get_config(match get_val!(parser, double, "config") {
+    let config = get_config(match get_val!(parser, long, "config") {
         Some(ArgValue::String(path)) => path,
         _ => {
             let mut home = home_dir().unwrap_or_else(|| {
@@ -249,14 +249,14 @@ fn main() {
 
         col.iter()
             .filter(|t| {
-                if let Some(ArgValue::String(project)) = get_val!(parser, double, "project") {
+                if let Some(ArgValue::String(project)) = get_val!(parser, long, "project") {
                     return t.has_project_tag(project);
                 }
 
                 true
             })
             .filter(|t| {
-                if let Some(ArgValue::String(context)) = get_val!(parser, double, "context") {
+                if let Some(ArgValue::String(context)) = get_val!(parser, long, "context") {
                     return t.has_context_tag(context);
                 }
 
