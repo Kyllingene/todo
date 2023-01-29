@@ -69,30 +69,29 @@ fn main() {
     };
 
     if get_flag!(parser, both, 'h', "help") {
-        println!("{} [options]", parser.binary.unwrap_or("todo".to_string()));
-        println!("      --help / -h        : prints this help message");
-        println!("       --new / -n <todo> : creates a new todo, with the given text");
-        println!("                           parses all metadata tags");
-        println!("  --complete / -c <todo> : completes the todo, specified by the given text");
-        println!("                           if no todo matches the text, looks for a todo with");
-        println!("                           that id (using the `id:` tag)");
-        println!("      --list / -l        : prints this help message");
-        println!("    --config      <file> : specifies the config file");
-        println!("                           defaults to ~/.todo-cfg.txt");
-        println!("   --project      <tag>  : filters by project tag");
-        println!("   --context      <tag>  : filters by context tag");
-        println!("   --archive / -a        : archives completed tasks");
-        println!("                           default archive file is source + .archive");
-        println!("      --file / -f <file> : specifies the source file");
-        println!("                           if todo.txt exists in the current directory,");
-        println!("                           defaults to that; otherwise, defaults to config");
-        println!();
-        println!("Config is in the todo.txt format, using metadata:");
-        println!("```");
-        println!("source path:<SOURCE-PATH> example:~/todo.txt");
-        println!("archive path:<ARCHIVE-PATH> example:~/todo.archive.txt");
-        // println!("x sort list");
-        println!("```");
+        println!("{} [options]\n\
+        \x20     --help / -h        : prints this help message\n\
+        \x20      --new / -n <todo> : creates a new todo, with the given text\n\
+        \x20                          parses all metadata tags\n\
+        \x20 --complete / -c <todo> : completes the todo, specified by the given text\n\
+        \x20                          if no todo matches the text, looks for a todo with\n\
+        \x20                          that id (using the `id:` tag)\n\
+        \x20     --list / -l        : prints this help message\n\
+        \x20   --config      <file> : specifies the config file\n\
+        \x20                          defaults to ~/.todo-cfg.txt\n\
+        \x20  --project      <tag>  : filters by project tag\n\
+        \x20  --context      <tag>  : filters by context tag\n\
+        \x20  --archive / -a        : archives completed tasks\n\
+        \x20                          default archive file is source + .archive\n\
+        \x20     --file / -f <file> : specifies the source file\n\
+        \x20                          if todo.txt exists in the current directory,\n\
+        \x20                          defaults to that; otherwise, defaults to config\n\
+        \n\
+        Config is in the todo.txt format, using metadata:\n\
+        ```\n\
+        source path:<SOURCE-PATH> example:~/todo.txt\n\
+        archive path:<ARCHIVE-PATH> example:~/todo.archive.txt\n\
+        ```", parser.binary.unwrap_or("todo".to_string()));
 
         exit(0);
     }
