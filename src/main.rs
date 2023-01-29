@@ -113,10 +113,12 @@ fn main() {
 
     let filename: String;
 
-    if Path::new("todo.txt").exists() {
-        filename = String::from("todo.txt");
-    } else if let Some(ArgValue::String(f)) = get_val!(parser, both, 'f', "file") {
+    println!("{:?}", get_val!(parser, both, 'f', "file"));
+    if let Some(ArgValue::String(f)) = get_val!(parser, both, 'f', "file") {
+        println!("{f}");
         filename = f;
+    } else if Path::new("todo.txt").exists() {
+        filename = String::from("todo.txt");
     } else if let Some(path) = &config.source {
         filename = path.to_string();
     } else {
