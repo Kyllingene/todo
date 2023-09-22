@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 todo-lib = {git = "https://github.com/kyllingene/todo-lib"}
-sarge = "2.0"
-dirs = "4.0.0"
+sarge = "4.0.2"
+dirs = "5.0.1"
