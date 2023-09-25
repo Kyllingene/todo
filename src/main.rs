@@ -1,8 +1,8 @@
 use std::{
     fs::{read_to_string, OpenOptions},
     io::Write,
-    path::Path,
     panic,
+    path::Path,
     str::FromStr,
 };
 
@@ -14,7 +14,7 @@ use todo_lib::{
 };
 
 mod helper;
-use helper::{log, BLUE, BOLD, ITALIC, RESET, YELLOW, CleanFail};
+use helper::{log, CleanFail, BLUE, BOLD, ITALIC, RESET, YELLOW};
 
 #[derive(Default, Debug)]
 struct Config {
@@ -28,10 +28,7 @@ fn get_config(filename: String) -> Config {
     let mut config = TodoTable::new(Some("Config"));
     config.add_col("Config");
     for line in config_txt.lines() {
-        config.add_todo(
-            Todo::from_str(line).fail("invalid config line"),
-            "Config",
-        );
+        config.add_todo(Todo::from_str(line).fail("invalid config line"), "Config");
     }
 
     let mut cfg = Config::default();
@@ -84,7 +81,7 @@ fn get_args() -> (String, Args) {
 
         std::process::exit(1);
     }));
-    
+
     let parser = ArgumentParser::new();
 
     let help = parser.add(tag::both('h', "help"));
@@ -105,13 +102,19 @@ fn get_args() -> (String, Args) {
     parser.parse().fail("failed to parse arguments");
 
     let minpri = match minpri.get() {
-	Ok(pri) => Some(TodoPriority::try_from(format!("({})", pri.to_uppercase()).as_str()).expect("invalid priority")),
-	Err(_) => None,
+        Ok(pri) => Some(
+            TodoPriority::try_from(format!("({})", pri.to_uppercase()).as_str())
+                .expect("invalid priority"),
+        ),
+        Err(_) => None,
     };
 
     let maxpri = match maxpri.get() {
-	Ok(pri) => Some(TodoPriority::try_from(format!("({})", pri.to_uppercase()).as_str()).expect("invalid priority")),
-	Err(_) => None,
+        Ok(pri) => Some(
+            TodoPriority::try_from(format!("({})", pri.to_uppercase()).as_str())
+                .expect("invalid priority"),
+        ),
+        Err(_) => None,
     };
 
     dbg!(&minpri, &maxpri);
@@ -129,8 +132,8 @@ fn get_args() -> (String, Args) {
         archive: archive.get().unwrap(),
         config: config.get().ok(),
 
-	minpri,
-	maxpri: maxpri,
+        minpri,
+        maxpri: maxpri,
     };
 
     (parser.binary().unwrap_or("todo".to_string()), args)
@@ -200,8 +203,7 @@ fn main() {
             "~/",
             &format!(
                 "{}{}",
-                home_dir().fail("failed to get home directory")
-                    .display(),
+                home_dir().fail("failed to get home directory").display(),
                 std::path::MAIN_SEPARATOR
             ),
             1,
@@ -229,18 +231,12 @@ fn main() {
             continue;
         }
 
-        todos.add_todo(
-            Todo::from_str(line).fail("invalid todo"),
-            "Todos",
-        );
+        todos.add_todo(Todo::from_str(line).fail("invalid todo"), "Todos");
     }
 
     let mut action = false;
     if let Some(todo) = args.new {
-        todos.add_todo(
-            Todo::from_str(&todo).fail("invalid todo"),
-            "Todos",
-        );
+        todos.add_todo(Todo::from_str(&todo).fail("invalid todo"), "Todos");
 
         action = true;
     }
@@ -317,18 +313,18 @@ fn main() {
                 true
             })
             .filter(|t| {
-		if let Some(minpri) = args.minpri {
-		    return t.priority >= minpri;
+                if let Some(minpri) = args.minpri {
+                    return t.priority >= minpri;
                 }
 
-		true
+                true
             })
             .filter(|t| {
-		if let Some(maxpri) = args.maxpri {
-		    return t.priority <= maxpri;
+                if let Some(maxpri) = args.maxpri {
+                    return t.priority <= maxpri;
                 }
 
-		true
+                true
             })
             .for_each(|t| {
                 println!("{}", t.colored(DEFAULT_STYLE));
@@ -397,4 +393,3 @@ fn main() {
         file.flush().fail("failed to write to file");
     };
 }
-
