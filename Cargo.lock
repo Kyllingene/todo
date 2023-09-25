@@ -264,7 +264,7 @@ dependencies = [
 
 [[package]]
 name = "todo"
-version = "3.3.0"
+version = "3.2.4"
 dependencies = [
  "dirs",
  "sarge",
@@ -273,8 +273,8 @@ dependencies = [
 
 [[package]]
 name = "todo-lib"
-version = "2.2.0"
-source = "git+https://github.com/kyllingene/todo-lib#47bdad5248f006f164277db44f7229b7da6f70a8"
+version = "3.0.0"
+source = "git+https://github.com/kyllingene/todo-lib#58248de4d2fba5ed8d9e037ce4033663d3aa3792"
 dependencies = [
  "chrono",
  "const_format",

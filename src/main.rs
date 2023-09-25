@@ -277,7 +277,7 @@ fn main() {
                 return Ordering::Greater;
             }
 
-            match y.priority.cmp(&x.priority) {
+            match x.priority.cmp(&y.priority) {
                 Ordering::Equal => {}
                 ord => return ord,
             }
