@@ -55,6 +55,7 @@ fn get_config(filename: String) -> Config {
 struct Args {
     help: bool,
     list: bool,
+    bump: bool,
 
     new: Option<String>,
     complete: Option<String>,
@@ -70,22 +71,11 @@ struct Args {
 }
 
 fn get_args() -> (String, Args) {
-    panic::set_hook(Box::new(|e| {
-        if let Some(e) = e.payload().downcast_ref::<&str>() {
-            log::err(e);
-        } else if let Some(e) = e.payload().downcast_ref::<String>() {
-            log::err(e);
-        } else {
-            log::err(format!("internal error at {}", e.location().unwrap()));
-        }
-
-        std::process::exit(1);
-    }));
-
     let parser = ArgumentParser::new();
 
     let help = parser.add(tag::both('h', "help"));
     let list = parser.add(tag::both('l', "list"));
+    let bump = parser.add(tag::both('b', "bump"));
 
     let new = parser.add(tag::both('n', "new"));
     let complete = parser.add(tag::both('c', "complete"));
@@ -120,6 +110,7 @@ fn get_args() -> (String, Args) {
     let args = Args {
         help: help.get().unwrap(),
         list: list.get().unwrap(),
+	bump: bump.get().unwrap(),
 
         new: new.get().ok(),
         complete: complete.get().ok(),
@@ -138,6 +129,18 @@ fn get_args() -> (String, Args) {
 }
 
 fn main() {
+    panic::set_hook(Box::new(|e| {
+        if let Some(e) = e.payload().downcast_ref::<&str>() {
+            log::err(e);
+        } else if let Some(e) = e.payload().downcast_ref::<String>() {
+            log::err(e);
+        } else {
+            log::err(format!("internal error at {}", e.location().unwrap()));
+        }
+
+        std::process::exit(1);
+    }));
+
     let (binary, args) = get_args();
 
     if args.help {
