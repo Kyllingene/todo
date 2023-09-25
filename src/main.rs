@@ -1,8 +1,8 @@
 use std::{
     fs::{read_to_string, OpenOptions},
-    io::{BufWriter, Write},
+    io::Write,
     path::Path,
-    process::exit,
+    panic,
     str::FromStr,
 };
 
@@ -14,7 +14,7 @@ use todo_lib::{
 };
 
 mod helper;
-use helper::{log, BLUE, BOLD, ITALIC, RESET, YELLOW};
+use helper::{log, BLUE, BOLD, ITALIC, RESET, YELLOW, CleanFail};
 
 #[derive(Default, Debug)]
 struct Config {
@@ -29,10 +29,7 @@ fn get_config(filename: String) -> Config {
     config.add_col("Config");
     for line in config_txt.lines() {
         config.add_todo(
-            Todo::from_str(line).unwrap_or_else(|e| {
-                log::err("invalid config line", e);
-                exit(1);
-            }),
+            Todo::from_str(line).fail("invalid config line"),
             "Config",
         );
     }
@@ -72,6 +69,18 @@ struct Args {
 }
 
 fn get_args() -> (String, Args) {
+    panic::set_hook(Box::new(|e| {
+        if let Some(e) = e.payload().downcast_ref::<&str>() {
+            log::err(e);
+        } else if let Some(e) = e.payload().downcast_ref::<String>() {
+            log::err(e);
+        } else {
+            log::err(format!("internal error at {}", e.location().unwrap()));
+        }
+
+        std::process::exit(1);
+    }));
+    
     let parser = ArgumentParser::new();
 
     let help = parser.add(tag::both('h', "help"));
@@ -85,10 +94,7 @@ fn get_args() -> (String, Args) {
     let project = parser.add(tag::long("project"));
     let config = parser.add(tag::long("config"));
 
-    if let Err(e) = parser.parse() {
-        log::err("error (while parsing arguments)", e);
-        exit(1);
-    }
+    parser.parse().fail("failed to parse arguments");
 
     let args = Args {
         help: help.get().unwrap(),
@@ -129,24 +135,20 @@ fn main() {
         \x20                          defaults to that; otherwise, defaults to config\n\
         \n\
         Config is in the todo.txt format, using metadata:\n\
-        ```\n{ITALIC}{BLUE}\
+        \n{ITALIC}{BLUE}\
         source path:<SOURCE-PATH> example:~/todo.txt\n\
         archive path:<ARCHIVE-PATH> example:~/todo.archive.txt{RESET}\n\
-        ```",
+        ",
             binary
         );
 
-        exit(0);
+        return;
     }
 
     let config = get_config(match args.config {
         Some(path) => path,
         _ => {
-            let mut home = home_dir().unwrap_or_else(|| {
-                log::err("error", "failed to get home directory");
-                exit(1)
-            });
-
+            let mut home = home_dir().fail("failed to get home directory");
             home.push(".todo-cfg.txt");
 
             home.display().to_string()
@@ -162,10 +164,7 @@ fn main() {
     } else if let Some(path) = &config.source {
         filename = path.to_string();
     } else {
-        let mut path = home_dir().unwrap_or_else(|| {
-            log::err("error", "failed to get home directory");
-            exit(1);
-        });
+        let mut path = home_dir().fail("failed to get home directory");
         path.push("todo.txt");
 
         filename = path.display().to_string();
@@ -176,11 +175,7 @@ fn main() {
             "~/",
             &format!(
                 "{}{}",
-                home_dir()
-                    .unwrap_or_else(|| {
-                        log::err("error", "failed to get home directory");
-                        exit(1);
-                    })
+                home_dir().fail("failed to get home directory")
                     .display(),
                 std::path::MAIN_SEPARATOR
             ),
@@ -199,8 +194,7 @@ fn main() {
             if e.raw_os_error().unwrap_or(0) == 2 {
                 "".to_string()
             } else {
-                log::err("error (while reading file)", e);
-                exit(1);
+                panic!("failed to read file: {e}");
             }
         }
     };
@@ -211,10 +205,7 @@ fn main() {
         }
 
         todos.add_todo(
-            Todo::from_str(line).unwrap_or_else(|e| {
-                log::err("invalid todo", e);
-                exit(1);
-            }),
+            Todo::from_str(line).fail("invalid todo"),
             "Todos",
         );
     }
@@ -222,10 +213,7 @@ fn main() {
     let mut action = false;
     if let Some(todo) = args.new {
         todos.add_todo(
-            Todo::from_str(&todo).unwrap_or_else(|e| {
-                log::err("invalid todo", e);
-                exit(1);
-            }),
+            Todo::from_str(&todo).fail("invalid todo"),
             "Todos",
         );
 
@@ -239,12 +227,7 @@ fn main() {
             todo = todos.get_meta("Todos", "id", todo_title.as_str());
         }
 
-        if let Some(todo) = todo {
-            todo.complete();
-        } else {
-            log::err("couldn't find todo", todo_title);
-            exit(1);
-        }
+        todo.fail("failed to find todo").complete();
 
         action = true;
     }
@@ -321,10 +304,7 @@ fn main() {
             archive = config.source.unwrap();
             archive.push_str(".archive");
         } else {
-            let mut path = home_dir().unwrap_or_else(|| {
-                log::err("error", "failed to get home directory");
-                exit(1);
-            });
+            let mut path = home_dir().fail("failed to get home directory");
             path.push("todo.txt.archive");
 
             archive = path.display().to_string();
@@ -336,81 +316,46 @@ fn main() {
 
         let archived = todos.iter().filter(|t| t.completed);
 
-        let mut file = match OpenOptions::new()
+        let mut file = OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .open(filename.clone())
-        {
-            Ok(file) => file,
-            Err(e) => {
-                log::err("error (while opening file to write)", e);
-                exit(1);
-            }
-        };
+            .fail("failed to open todo file");
 
         keep.for_each(|t| {
-            writeln!(file, "{t}").unwrap_or_else(|e| {
-                log::err("error (while writing to file)", e);
-                exit(1);
-            });
+            writeln!(file, "{t}").fail("failed to write to file");
         });
 
-        file.flush().unwrap_or_else(|e| {
-            log::err("error (while writing to file)", e);
-            exit(1);
-        });
+        file.flush().fail("failed to write to file");
 
-        let mut file = match OpenOptions::new()
+        let mut file = OpenOptions::new()
             .create(true)
             .write(true)
             .append(true)
             .open(archive)
-        {
-            Ok(file) => file,
-            Err(e) => {
-                log::err("error (while opening archive file to write)", e);
-                exit(1);
-            }
-        };
+            .fail("failed to open archive file");
 
         archived.for_each(|t| {
-            writeln!(file, "{t}").unwrap_or_else(|e| {
-                log::err("error (while writing to archive file)", e);
-                exit(1);
-            });
+            writeln!(file, "{t}").fail("failed to write to archive file");
         });
 
-        file.flush().unwrap_or_else(|e| {
-            log::err("error (while writing to archive file)", e);
-            exit(1);
-        });
+        file.flush().fail("failed to write to archive file");
     }
 
     if changed {
-        let mut file = match OpenOptions::new()
+        let mut file = OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .open(filename)
-        {
-            Ok(file) => BufWriter::new(file),
-            Err(e) => {
-                log::err("error (while opening file to write)", e);
-                exit(1);
-            }
-        };
+            .fail("failed to open todo file");
 
         todos.col("Todos").unwrap().todos.iter().for_each(|t| {
-            writeln!(file, "{t}").unwrap_or_else(|e| {
-                log::err("error (while writing to file)", e);
-                exit(1);
-            });
+            writeln!(file, "{t}").fail("failed to write to file");
         });
 
-        file.flush().unwrap_or_else(|e| {
-            log::err("error (while writing to file)", e);
-            exit(1);
-        });
+        file.flush().fail("failed to write to file");
     };
 }
+
