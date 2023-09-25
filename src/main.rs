@@ -146,22 +146,25 @@ fn main() {
     if args.help {
         println!(
             "{} {YELLOW}{ITALIC}[options]{RESET}\n\
-        \x20     {BOLD}--help / -h{RESET}        : prints this help message\n\
-        \x20      {BOLD}--new / -n{RESET} {YELLOW}{ITALIC}<todo>{RESET} : creates a new todo, with the given text\n\
-        \x20                          parses all metadata tags\n\
-        \x20 {BOLD}--complete / -c{RESET} {YELLOW}{ITALIC}<todo>{RESET} : completes the todo, specified by the given text\n\
-        \x20                          if no todo matches the text, looks for a todo with\n\
-        \x20                          that id (using the `id:` tag)\n\
-        \x20     {BOLD}--list / -l{RESET}        : prints this help message\n\
-        \x20   {BOLD}--config{RESET}      {YELLOW}{ITALIC}<file>{RESET} : specifies the config file\n\
-        \x20                          defaults to ~/.todo-cfg.txt\n\
-        \x20  {BOLD}--project{RESET}      {YELLOW}{ITALIC}<tag>{RESET}  : filters by project tag\n\
-        \x20  {BOLD}--context{RESET}      {YELLOW}{ITALIC}<tag>{RESET}  : filters by context tag\n\
-        \x20  {BOLD}--archive / -a{RESET}        : archives completed tasks\n\
-        \x20                          default archive file is source + .archive\n\
-        \x20     {BOLD}--file / -f{RESET} {YELLOW}{ITALIC}<file>{RESET} : specifies the source file\n\
-        \x20                          if todo.txt exists in the current directory,\n\
-        \x20                          defaults to that; otherwise, defaults to config\n\
+        \x20          {BOLD}--help / -h{RESET}        : prints this help message\n\
+        \x20           {BOLD}--new / -n{RESET} {YELLOW}{ITALIC}<todo>{RESET} : creates a new todo, with the given text\n\
+        \x20                               parses all metadata tags\n\
+        \x20      {BOLD}--complete / -c{RESET} {YELLOW}{ITALIC}<todo>{RESET} : completes the todo, specified by the given text\n\
+        \x20                               if no todo matches the text, looks for a todo with\n\
+        \x20                               that id (using the `id:` tag)\n\
+        \x20          {BOLD}--list / -l{RESET}        : prints this help message\n\
+        \x20        {BOLD}--config{RESET}      {YELLOW}{ITALIC}<file>{RESET} : specifies the config file\n\
+        \x20                               defaults to ~/.todo-cfg.txt\n\
+        \x20       {BOLD}--project{RESET}      {YELLOW}{ITALIC}<tag>{RESET}  : filters by project tag\n\
+        \x20       {BOLD}--context{RESET}      {YELLOW}{ITALIC}<tag>{RESET}  : filters by context tag\n\
+        \x20  {BOLD}--min-priority / -p{RESET} {YELLOW}{ITALIC}<pri>{RESET}  : filters by min priority\n\
+        \x20  {BOLD}--max-priority / -P{RESET} {YELLOW}{ITALIC}<pri>{RESET}  : filters by max priority\n\
+        \x20       {BOLD}--archive / -a{RESET}        : archives completed tasks\n\
+        \x20                               default archive file is source + .archive\n\
+        \x20          {BOLD}--file / -f{RESET} {YELLOW}{ITALIC}<file>{RESET} : specifies the source file\n\
+        \x20                               if todo.txt exists in the current directory,\n\
+        \x20                               defaults to that; otherwise, defaults to config\n\
+        \x20          {BOLD}--bump / -b{RESET}        : bumps each priority up\n\
         \n\
         Config is in the todo.txt format, using metadata:\n\
         \n{ITALIC}{BLUE}\
