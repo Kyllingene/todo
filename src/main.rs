@@ -58,14 +58,18 @@ fn get_config(filename: String) -> Config {
 struct Args {
     help: bool,
     list: bool,
-    archive: bool,
 
     new: Option<String>,
     complete: Option<String>,
-    file: Option<String>,
     context: Option<String>,
     project: Option<String>,
+
+    file: Option<String>,
+    archive: bool,
     config: Option<String>,
+
+    minpri: Option<TodoPriority>,
+    maxpri: Option<TodoPriority>,
 }
 
 fn get_args() -> (String, Args) {
@@ -85,27 +89,48 @@ fn get_args() -> (String, Args) {
 
     let help = parser.add(tag::both('h', "help"));
     let list = parser.add(tag::both('l', "list"));
-    let archive = parser.add(tag::both('a', "archive"));
 
     let new = parser.add(tag::both('n', "new"));
     let complete = parser.add(tag::both('c', "complete"));
-    let file = parser.add(tag::both('f', "file"));
     let context = parser.add(tag::long("context"));
     let project = parser.add(tag::long("project"));
+
+    let file = parser.add(tag::both('f', "file"));
+    let archive = parser.add(tag::both('a', "archive"));
     let config = parser.add(tag::long("config"));
 
+    let minpri = parser.add::<String>(tag::both('p', "min-priority"));
+    let maxpri = parser.add::<String>(tag::both('P', "max-priority"));
+
     parser.parse().fail("failed to parse arguments");
+
+    let minpri = match minpri.get() {
+	Ok(pri) => Some(TodoPriority::try_from(format!("({})", pri.to_uppercase()).as_str()).expect("invalid priority")),
+	Err(_) => None,
+    };
+
+    let maxpri = match maxpri.get() {
+	Ok(pri) => Some(TodoPriority::try_from(format!("({})", pri.to_uppercase()).as_str()).expect("invalid priority")),
+	Err(_) => None,
+    };
+
+    dbg!(&minpri, &maxpri);
 
     let args = Args {
         help: help.get().unwrap(),
         list: list.get().unwrap(),
-        archive: archive.get().unwrap(),
+
         new: new.get().ok(),
         complete: complete.get().ok(),
-        file: file.get().ok(),
         context: context.get().ok(),
         project: project.get().ok(),
+
+        file: file.get().ok(),
+        archive: archive.get().unwrap(),
         config: config.get().ok(),
+
+	minpri,
+	maxpri: maxpri,
     };
 
     (parser.binary().unwrap_or("todo".to_string()), args)
@@ -246,7 +271,7 @@ fn main() {
                 return Ordering::Greater;
             }
 
-            match x.priority.cmp(&y.priority) {
+            match y.priority.cmp(&x.priority) {
                 Ordering::Equal => {}
                 ord => return ord,
             }
@@ -290,6 +315,20 @@ fn main() {
                 }
 
                 true
+            })
+            .filter(|t| {
+		if let Some(minpri) = args.minpri {
+		    return t.priority >= minpri;
+                }
+
+		true
+            })
+            .filter(|t| {
+		if let Some(maxpri) = args.maxpri {
+		    return t.priority <= maxpri;
+                }
+
+		true
             })
             .for_each(|t| {
                 println!("{}", t.colored(DEFAULT_STYLE));
