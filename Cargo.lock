@@ -273,8 +273,8 @@ dependencies = [
 
 [[package]]
 name = "todo-lib"
-version = "2.0.4"
-source = "git+https://github.com/kyllingene/todo-lib#dcc23992a1f308b400e94df7986327b7b7ec857f"
+version = "2.2.0"
+source = "git+https://github.com/kyllingene/todo-lib#47bdad5248f006f164277db44f7229b7da6f70a8"
 dependencies = [
  "chrono",
  "const_format",

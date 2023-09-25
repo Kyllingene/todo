@@ -110,7 +110,7 @@ fn get_args() -> (String, Args) {
     let args = Args {
         help: help.get().unwrap(),
         list: list.get().unwrap(),
-	bump: bump.get().unwrap(),
+        bump: bump.get().unwrap(),
 
         new: new.get().ok(),
         complete: complete.get().ok(),
@@ -214,7 +214,7 @@ fn main() {
     let mut todos = TodoTable::new(None::<char>);
     todos.add_col("Todos");
 
-    let changed = args.new.is_some() || args.complete.is_some() || args.archive;
+    let changed = args.new.is_some() || args.complete.is_some() || args.bump || args.archive;
 
     let todo_txt = match read_to_string(filename.clone()) {
         Ok(s) => s,
@@ -236,6 +236,12 @@ fn main() {
     }
 
     let mut action = false;
+    if args.bump {
+        for todo in todos.col("Todos").unwrap().iter_mut() {
+            todo.priority.inc();
+        }
+    }
+
     if let Some(todo) = args.new {
         todos.add_todo(Todo::from_str(&todo).fail("invalid todo"), "Todos");
 
