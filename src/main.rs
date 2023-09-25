@@ -117,8 +117,6 @@ fn get_args() -> (String, Args) {
         Err(_) => None,
     };
 
-    dbg!(&minpri, &maxpri);
-
     let args = Args {
         help: help.get().unwrap(),
         list: list.get().unwrap(),
