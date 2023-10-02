@@ -243,6 +243,8 @@ fn main() {
         for todo in todos.col("Todos").unwrap().iter_mut() {
             todo.priority.inc();
         }
+
+        action = true;
     }
 
     if let Some(todo) = args.new {
@@ -324,14 +326,14 @@ fn main() {
             })
             .filter(|t| {
                 if let Some(minpri) = args.minpri {
-                    return t.priority >= minpri;
+                    return t.priority <= minpri && !t.completed;
                 }
 
                 true
             })
             .filter(|t| {
                 if let Some(maxpri) = args.maxpri {
-                    return t.priority <= maxpri;
+                    return t.priority >= maxpri && !t.completed;
                 }
 
                 true
