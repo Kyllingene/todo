@@ -1,6 +1,6 @@
 [package]
 name = "todo"
-version = "4.0.1"
+version = "4.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,3 +9,4 @@ edition = "2021"
 todo-lib = {git = "https://github.com/kyllingene/todo-lib"}
 sarge = "4.0.2"
 dirs = "5.0.1"
+errata = "1.1.1"

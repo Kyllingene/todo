@@ -112,6 +112,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "errata"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "745dd8211371c26e92fe7cf0814580f1c7e8d761dbc411e20b63b4fe58f9fa2b"
+dependencies = [
+ "errata-macros",
+]
+
+[[package]]
+name = "errata-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8db8e72d44c2df9beef94b206581c0074c56c6ca001bd5197b4a8710c4f35bd8"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -233,9 +252,9 @@ checksum = "8ae9e9946837712d5cc388e0de14275fbd1070f13976971c7967737d179f6440"
 
 [[package]]
 name = "syn"
-version = "2.0.37"
+version = "2.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7303ef2c05cd654186cb250d29049a24840ca25d2747c25c0381c8d9e2f582e8"
+checksum = "e96b79aaa137db8f61e26363a0c9b47d8b4ec75da28b7d1d614c2303e232408b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -264,9 +283,10 @@ dependencies = [
 
 [[package]]
 name = "todo"
-version = "3.2.4"
+version = "4.0.1"
 dependencies = [
  "dirs",
+ "errata",
  "sarge",
  "todo-lib",
 ]
