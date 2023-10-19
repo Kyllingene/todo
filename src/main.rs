@@ -6,7 +6,7 @@ use std::{
 };
 
 use dirs::home_dir;
-use errata::{error_color as error, FallibleExt};
+use errata::{error, FallibleExt};
 use sarge::prelude::*;
 use todo_lib::{
     colors::{StyleScheme, DEFAULT_STYLE},
@@ -28,7 +28,7 @@ fn get_config(filename: String) -> Config {
     let mut config = TodoTable::new(Some("Config"));
     config.add_col("Config");
     for line in config_txt.lines() {
-        config.add_todo(Todo::from_str(line).fail_color("invalid config line"), "Config");
+        config.add_todo(Todo::from_str(line).fail("invalid config line"), "Config");
     }
 
     let mut cfg = Config::default();
@@ -89,7 +89,7 @@ fn get_args() -> (String, Args) {
     let minpri = parser.add::<String>(tag::both('p', "min-priority"));
     let maxpri = parser.add::<String>(tag::both('P', "max-priority"));
 
-    parser.parse().fail_color("failed to parse arguments");
+    parser.parse().fail("failed to parse arguments");
 
     let minpri = match minpri.get() {
         Ok(pri) => Some(
@@ -169,7 +169,7 @@ fn main() {
     let config = get_config(match args.config {
         Some(path) => path,
         _ => {
-            let mut home = home_dir().fail_color("failed to get home directory");
+            let mut home = home_dir().fail("failed to get home directory");
             home.push(".todo-cfg.txt");
 
             home.display().to_string()
@@ -185,7 +185,7 @@ fn main() {
     } else if let Some(path) = &config.source {
         filename = path.to_string();
     } else {
-        let mut path = home_dir().fail_color("failed to get home directory");
+        let mut path = home_dir().fail("failed to get home directory");
         path.push("todo.txt");
 
         filename = path.display().to_string();
@@ -196,7 +196,7 @@ fn main() {
             "~/",
             &format!(
                 "{}{}",
-                home_dir().fail_color("failed to get home directory").display(),
+                home_dir().fail("failed to get home directory").display(),
                 std::path::MAIN_SEPARATOR
             ),
             1,
@@ -224,7 +224,7 @@ fn main() {
             continue;
         }
 
-        todos.add_todo(Todo::from_str(line).fail_color("invalid todo"), "Todos");
+        todos.add_todo(Todo::from_str(line).fail("invalid todo"), "Todos");
     }
 
     let mut action = false;
@@ -237,7 +237,7 @@ fn main() {
     }
 
     if let Some(todo) = args.new {
-        todos.add_todo(Todo::from_str(&todo).fail_color("invalid todo"), "Todos");
+        todos.add_todo(Todo::from_str(&todo).fail("invalid todo"), "Todos");
 
         action = true;
     }
@@ -249,7 +249,7 @@ fn main() {
             todo = todos.get_meta("Todos", "id", todo_title.as_str());
         }
 
-        todo.fail_color("failed to find todo").complete();
+        todo.fail("failed to find todo").complete();
 
         action = true;
     }
@@ -340,7 +340,7 @@ fn main() {
             archive = config.source.unwrap();
             archive.push_str(".archive");
         } else {
-            let mut path = home_dir().fail_color("failed to get home directory");
+            let mut path = home_dir().fail("failed to get home directory");
             path.push("todo.txt.archive");
 
             archive = path.display().to_string();
@@ -357,26 +357,26 @@ fn main() {
             .write(true)
             .truncate(true)
             .open(filename.clone())
-            .fail_color("failed to open todo file");
+            .fail("failed to open todo file");
 
         keep.for_each(|t| {
-            writeln!(file, "{t}").fail_color("failed to write to file");
+            writeln!(file, "{t}").fail("failed to write to file");
         });
 
-        file.flush().fail_color("failed to write to file");
+        file.flush().fail("failed to write to file");
 
         let mut file = OpenOptions::new()
             .create(true)
             .write(true)
             .append(true)
             .open(archive)
-            .fail_color("failed to open archive file");
+            .fail("failed to open archive file");
 
         archived.for_each(|t| {
-            writeln!(file, "{t}").fail_color("failed to write to archive file");
+            writeln!(file, "{t}").fail("failed to write to archive file");
         });
 
-        file.flush().fail_color("failed to write to archive file");
+        file.flush().fail("failed to write to archive file");
     }
 
     if changed {
@@ -385,12 +385,12 @@ fn main() {
             .write(true)
             .truncate(true)
             .open(filename)
-            .fail_color("failed to open todo file");
+            .fail("failed to open todo file");
 
         todos.col("Todos").unwrap().todos.iter().for_each(|t| {
-            writeln!(file, "{t}").fail_color("failed to write to file");
+            writeln!(file, "{t}").fail("failed to write to file");
         });
 
-        file.flush().fail_color("failed to write to file");
+        file.flush().fail("failed to write to file");
     };
 }
