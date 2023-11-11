@@ -82,9 +82,9 @@ fn get_args() -> (String, Args) {
     let context = parser.add(tag::long("context"));
     let project = parser.add(tag::long("project"));
 
-    let file = parser.add(tag::both('f', "file"));
-    let archive = parser.add(tag::both('a', "archive"));
-    let config = parser.add(tag::long("config"));
+    let file = parser.add(tag::both('f', "file").env("TODO_TODO_FILE"));
+    let archive = parser.add(tag::both('a', "archive").env("TODO_ARCHIVE_FILE"));
+    let config = parser.add(tag::long("config").env("TODO_CONFIG_FILE"));
 
     let minpri = parser.add::<String>(tag::both('p', "min-priority"));
     let maxpri = parser.add::<String>(tag::both('P', "max-priority"));
